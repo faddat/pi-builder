@@ -35,9 +35,6 @@ REPO_URL = http://de3.mirror.archlinuxarm.org
 BUILD_OPTS ?=
 
 CARD ?= /dev/mmcblk0
-CARD_DATA_FS_TYPE ?=
-CARD_DATA_FS_FLAGS ?=
-CARD_DATA_BEGIN_AT ?= 4352MiB
 
 QEMU_PREFIX ?= /usr
 QEMU_RM ?= 1
@@ -73,7 +70,6 @@ _RPI_RESULT_ROOTFS = $(_TMP_DIR)/result-rootfs
 _CARD_P = $(if $(findstring mmcblk,$(CARD)),p,$(if $(findstring loop,$(CARD)),p,))
 _CARD_BOOT = $(CARD)$(_CARD_P)1
 _CARD_ROOTFS = $(CARD)$(_CARD_P)2
-_CARD_DATA = $(CARD)$(_CARD_P)3
 
 
 # =====
@@ -320,8 +316,7 @@ format: $(__DEP_TOOLBOX)
 		&& set -e \
 		&& parted $(CARD) -s mklabel msdos \
 		&& parted $(CARD) -a optimal -s mkpart primary fat32 0% 256MiB \
-		&& parted $(CARD) -a optimal -s mkpart primary ext4 256MiB $(if $(CARD_DATA_FS_TYPE),$(CARD_DATA_BEGIN_AT),100%) \
-		&& $(if $(CARD_DATA_FS_TYPE),parted $(CARD) -a optimal -s mkpart primary $(CARD_DATA_FS_TYPE) $(CARD_DATA_BEGIN_AT) 100%,/bin/true) \
+		&& parted $(CARD) -a optimal -s mkpart primary ext4 256MiB 100% \
 		&& partprobe $(CARD) \
 	"
 	$(__DOCKER_RUN_TMP_PRIVILEGED) bash -c " \
@@ -329,7 +324,6 @@ format: $(__DEP_TOOLBOX)
 		&& set -e \
 		&& yes | mkfs.vfat $(_CARD_BOOT) \
 		&& yes | mkfs.ext4 $(_CARD_ROOTFS) \
-		&& $(if $(CARD_DATA_FS_TYPE),yes | mkfs.$(CARD_DATA_FS_TYPE) $(CARD_DATA_FS_FLAGS) $(_CARD_DATA),/bin/true) \
 	"
 	$(call say,"Format complete")
 
